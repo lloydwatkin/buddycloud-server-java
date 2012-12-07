@@ -1,6 +1,7 @@
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.get;
 
 import java.io.StringReader;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
@@ -86,6 +87,10 @@ public class ItemsGet implements PubSubElementProcessor {
 		element = elm;
 		resultSetManagement = rsm;
 
+		if (false == ResultSet.isValidRSMRequest(resultSetManagement)) {
+			resultSetManagement = null;
+		}
+
 		if ((node == null) || (true == node.equals(""))) {
 			missingNodeIdRequest();
 			outQueue.put(reply);
@@ -157,60 +162,19 @@ public class ItemsGet implements PubSubElementProcessor {
 		Element pubsub = new DOMElement(PubSubGet.ELEMENT_NAME,
 				new org.dom4j.Namespace("", JabberPubsub.NAMESPACE_URI));
 
-		int maxItemsToReturn = MAX_ITEMS_TO_RETURN;
-		String afterItemId = null;
-
-		String max_items = element.attributeValue("max_items");
-		if (max_items != null) {
-			maxItemsToReturn = Integer.parseInt(max_items);
-		}
-
-		if (resultSetManagement != null) {
-			Element max = resultSetManagement.element("max");
-			if (max != null) {
-				maxItemsToReturn = Integer.parseInt(max.getTextTrim());
-			}
-			Element after = resultSetManagement.element("after");
-			if (after != null) {
-				afterItemId = after.getTextTrim();
-			}
-		}
-
 		Element items = pubsub.addElement("items");
 		items.addAttribute("node", node);
 
 		xmlReader = new SAXReader();
-		entry = null;
-		int totalEntriesCount = 0;
+		entry     = null;
+		Element rsmElement;
 
 		if (node.substring(node.length() - 13).equals("subscriptions")) {
-			totalEntriesCount = getSubscriptionItems(items, maxItemsToReturn,
-					afterItemId);
+			rsmElement = getSubscriptionItems(items);
 		} else {
-			totalEntriesCount = getNodeItems(items, maxItemsToReturn,
-					afterItemId);
+			rsmElement = getNodeItems(items);
 		}
-
-		if ((resultSetManagement != null)
-				|| (totalEntriesCount > maxItemsToReturn)) {
-			/*
-			 * TODO, add result set here as defined in 6.5.4 Returning Some
-			 * Items <set xmlns='http://jabber.org/protocol/rsm'> <first
-			 * index='0'>368866411b877c30064a5f62b917cffe</first>
-			 * <last>4e30f35051b7b8b42abe083742187228</last> <count>19</count>
-			 * </set>
-			 */
-			Element rsm = pubsub.addElement("set",
-					"http://jabber.org/protocol/rsm");
-
-			if (firstItem != null) {
-				rsm.addElement("first").setText(firstItem);
-				rsm.addElement("last").setText(lastItem);
-			}
-			rsm.addElement("count")
-					.setText(Integer.toString(totalEntriesCount));
-		}
-
+		pubsub.add(rsmElement);
 		reply.setChildElement(pubsub);
 	}
 
@@ -276,72 +240,49 @@ public class ItemsGet implements PubSubElementProcessor {
 	/**
 	 * Get items for !/subscriptions nodes
 	 */
-	private int getNodeItems(Element items, int maxItemsToReturn,
-			String afterItemId) throws NodeStoreException {
+	private Element getNodeItems(Element items) throws NodeStoreException {
+        
+        ResultSet<NodeItem> nodeItems = channelManager.getNodeItems(node);
+        List<NodeItem> rsmNodeItems = nodeItems.applyRSMDirectives(resultSetManagement);
 
-		CloseableIterator<NodeItem> itemIt = channelManager.getNodeItems(node,
-				afterItemId, maxItemsToReturn);
-		if (null == itemIt) {
-			return 0;
-		}
-		try {
-			while (itemIt.hasNext()) {
-				NodeItem nodeItem = itemIt.next();
-
-				if (firstItem == null) {
-					firstItem = nodeItem.getId();
-				}
-				try {
-					entry = xmlReader.read(
-							new StringReader(nodeItem.getPayload()))
-							.getRootElement();
-					Element item = items.addElement("item");
-					item.addAttribute("id", nodeItem.getId());
-					item.add(entry);
-					lastItem = nodeItem.getId();
-				} catch (DocumentException e) {
-					LOGGER.error("Error parsing a node entry, ignoring. "
-							+ nodeItem);
-				}
-
+		for (NodeItem nodeItem : rsmNodeItems) {
+			try {
+				entry = xmlReader.read(
+						new StringReader(nodeItem.getPayload()))
+						.getRootElement();
+				Element item = items.addElement("item");
+				item.addAttribute("id", nodeItem.getId());
+				item.add(entry);
+			} catch (DocumentException e) {
+				LOGGER.error("Error parsing a node entry, ignoring. "
+						+ nodeItem);
 			}
-			return channelManager.countNodeItems(node);
-		} finally {
-			if (itemIt != null)
-				itemIt.close();
 		}
+		return nodeItems.generateSetElementFromResults(rsmNodeItems);
 	}
 
 	/**
 	 * Get items for the /subscriptions node
 	 */
-	private int getSubscriptionItems(Element items, int maxItemsToReturn,
-			String afterItemId) throws NodeStoreException {
+	private Element getSubscriptionItems(Element items) throws NodeStoreException {
 
 		ResultSet<NodeSubscription> subscribers = channelManager
 				.getNodeSubscriptions(node);
-		int entries = 0;
-		if (null == subscribers) {
-			return entries;
-		}
+		List<NodeSubscription> rsmSubscribers = subscribers
+		    .applyRSMDirectives(resultSetManagement);
+		
 		Element jidItem;
 		Element query;
 
-		for (NodeSubscription subscriber : subscribers) {
+		for (NodeSubscription subscriber : rsmSubscribers) {
     
 			jidItem = items.addElement("item");
 			jidItem.addAttribute("id", subscriber.getUser().toString());
 			query = jidItem.addElement("query");
 			query.addNamespace("", JabberPubsub.NS_DISCO_ITEMS);
-			
-			if (firstItem == null) {
-				firstItem = subscriber.getUser().toString();
-			}
-			lastItem = subscriber.getUser().toString();
 			addSubscriptionItems(query, subscriber.getUser());
-			entries++;
 		}
-		return entries;
+		return subscribers.generateSetElementFromResults(rsmSubscribers);
 	}
 
 	private void addSubscriptionItems(Element query, JID subscriber)
