@@ -19,7 +19,7 @@ public abstract class PubSubElementProcessorAbstract
 {
     
     protected BlockingQueue<Packet> outQueue;
-    protected ChannelManager             channelManager;
+    protected ChannelManager        channelManager;
     protected Element               element;
     protected IQ                    response;
     protected IQ                    request;
@@ -28,6 +28,7 @@ public abstract class PubSubElementProcessorAbstract
     protected String                topicsDomain;
     protected String                node;
     protected Helper                configurationHelper;
+	protected String                anonymousDomain;
 
 	public void setOutQueue(BlockingQueue<Packet> outQueue)
 	{
@@ -65,6 +66,18 @@ public abstract class PubSubElementProcessorAbstract
 			    .getProperty("server.domain.topics");
 		}
 		return topicsDomain;		
+	}
+	
+	public void setAnonymouseDomain(String domain) {
+		               anonymousDomain = domain;
+	}
+	
+	protected String getAnonymousDomain() {
+		if (null == topicsDomain) {
+            anonymousDomain = Configuration.getInstance()
+			    .getProperty("server.domain.anon");
+		}
+		return anonymousDomain;
 	}
 
 	public void setConfigurationHelper(Helper helper)

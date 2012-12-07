@@ -16,7 +16,8 @@ public class XmppComponent {
 	private String hostname;
 	private int socket;
 	
-	private String domainName;
+	private String channelServer;
+	private String anonServer;
 	private String password;
 	private Properties conf;
 	
@@ -24,8 +25,9 @@ public class XmppComponent {
 	    setConf(conf);
 		hostname = conf.getProperty("xmpp.host");
 		socket = Integer.valueOf(conf.getProperty("xmpp.port"));
-		domainName = conf.getProperty("xmpp.subdomain");
+		channelServer = conf.getProperty("server.domain.channels");
 		password = conf.getProperty("xmpp.secretkey");
+		anonServer = conf.getProperty("server.domain.anon");
 
 		try {
 			PropertyConfigurator.configure(DATABASE_CONFIGURATION_FILE);
@@ -41,8 +43,16 @@ public class XmppComponent {
 	
 	public void run() throws ComponentException {
 		ExternalComponentManager manager = new ExternalComponentManager(
-		        this.hostname, this.socket);
-		manager.setSecretKey(this.domainName, this.password);
-		manager.addComponent(this.domainName, new ChannelsEngine(conf));
+		        hostname, socket);
+		ChannelsEngine channelsEngine = new ChannelsEngine(conf);
+		manager.setSecretKey(channelServer, this.password);
+		manager.addComponent(channelServer, channelsEngine);
+		//if (null != anonServer) {
+		logger.debug("Adding anonymous domain: " + channelServer);    
+		logger.debug("Adding anonymous domain: " + anonServer);
+		    
+		    manager.setSecretKey(anonServer, this.password);
+			manager.addComponent(anonServer, channelsEngine);
+		//}
 	}
 }

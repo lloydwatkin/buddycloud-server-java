@@ -5,6 +5,7 @@ xmpp.secretkey=2255998899442277
 
 server.domain=xmpp.lobstermonster.org
 server.domain.topics=topics.lobstermonster.org
+server.domain.anon=anon.lobstermonster.org
 
 jdbc.proxool.driver-url=jdbc:hsqldb:.
 jdbc.proxool.driver-class=org.hsqldb.jdbcDriver

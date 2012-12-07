@@ -209,10 +209,14 @@ public class ChannelManagerImpl implements ChannelManager {
 		return ((true == nodeId
 				.contains("@"
 						+ configuration
-								.getProperty(Configuration.CONFIGURATION_SERVER_DOMAIN))) || (true == nodeId
-				.contains("@"
-						+ configuration
-								.getProperty(Configuration.CONFIGURATION_SERVER_TOPICS_DOMAIN))));
+								.getProperty(Configuration.CONFIGURATION_SERVER_DOMAIN)))
+				|| (true == nodeId
+						.contains("@"
+								+ configuration
+										.getProperty(Configuration.CONFIGURATION_SERVER_TOPICS_DOMAIN))) || (true == nodeId
+					.contains("@"
+							+ configuration
+									.getProperty(Configuration.CONFIGURATION_SERVER_ANON_DOMAIN))));
 	}
 
 	@Override
@@ -229,6 +233,6 @@ public class ChannelManagerImpl implements ChannelManager {
 
 	@Override
 	public void addRemoteNode(String node) throws NodeStoreException {
-		nodeStore.addRemoteNode(node);		
+		nodeStore.addRemoteNode(node);
 	}
 }
