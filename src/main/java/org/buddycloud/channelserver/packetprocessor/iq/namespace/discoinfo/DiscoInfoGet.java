@@ -126,8 +126,10 @@ public class DiscoInfoGet implements PacketProcessor<IQ> {
 		    || requestIq.getTo().toString().equals(configuration.getProperty("server.domain.topics"))) {
 		    Element query = result.setChildElement(ELEMENT_NAME,
 					JabberDiscoInfo.NAMESPACE_URI);
-			query.addElement("item").addAttribute("name", "buddycloud-server")
+			query.addElement("identity").addAttribute("name", "buddycloud-server")
 					.addAttribute("jid", configuration.getProperty("server.domain.channels"));
+			query.addElement("identity").addAttribute("category", "account")
+			    .addAttribute("type", "anonymous");
 		} else {
 			Element query = result.setChildElement(ELEMENT_NAME,
 					JabberDiscoInfo.NAMESPACE_URI);
