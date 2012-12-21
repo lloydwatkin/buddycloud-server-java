@@ -13,7 +13,7 @@ import org.xmpp.packet.Packet;
 public class DiscoResult implements PacketProcessor<IQ> {
 
 	public static final String ELEMENT_NAME = "query";
-	private static final Logger logger = Logger.getLogger(DiscoInfoGet.class);
+	private static final Logger logger = Logger.getLogger(DiscoResult.class);
 	private final BlockingQueue<Packet> outQueue;
 	private String node;
 

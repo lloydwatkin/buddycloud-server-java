@@ -1,6 +1,7 @@
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.discoinfo;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 
@@ -21,42 +22,31 @@ import org.xmpp.packet.PacketError;
 public class DiscoInfoGet implements PacketProcessor<IQ> {
 
 	public static final String ELEMENT_NAME = "query";
-	private static final Logger LOGGER = Logger.getLogger(DiscoInfoGet.class);
+	private static final Logger logger = Logger.getLogger(DiscoInfoGet.class);
 	private final BlockingQueue<Packet> outQueue;
 	private final ChannelManager channelManager;
+	private Properties configuration;
 	private String node;
-
+    private IQ result;
 	private IQ requestIq;
 	
-	public DiscoInfoGet(BlockingQueue<Packet> outQueue, ChannelManager channelManager) {
+	public DiscoInfoGet(BlockingQueue<Packet> outQueue, ChannelManager channelManager, Properties configuration) {
 		this.outQueue = outQueue;
 		this.channelManager = channelManager;
+		this.configuration = configuration;
 	}
 
 	@Override
 	public void process(IQ reqIQ) throws Exception {
 
-		requestIq = reqIQ;
-		IQ result   = IQ.createResultIQ(reqIQ);
+		requestIq   = reqIQ;
+		result      = IQ.createResultIQ(reqIQ);
 		Element elm = reqIQ.getChildElement();
-		node = elm.attributeValue("node");
+		node        = elm.attributeValue("node");
 		
 		if ((node == null) || (true == node.equals(""))) {
-			Element query = result.setChildElement(ELEMENT_NAME,
-					JabberDiscoInfo.NAMESPACE_URI);
-			query.addElement("identity").addAttribute("category", "pubsub")
-					.addAttribute("type", "channels");
 
-			query.addElement("identity").addAttribute("category", "pubsub")
-					.addAttribute("type", "inbox");
-
-			query.addElement("feature").addAttribute("var",
-					"jabber:iq:register");
-
-			query.addElement("feature").addAttribute("var",
-					"http://jabber.org/protocol/disco#info");
-
-			outQueue.put(result);
+			getLocalDiscoResponse();
 			return;
 		}
 
@@ -126,7 +116,30 @@ public class DiscoInfoGet implements PacketProcessor<IQ> {
 				"http://jabber.org/protocol/pubsub");
 
 		query.add(x.getElement());
-        LOGGER.trace("Returning DISCO info for node: " + node);
+        logger.trace("Returning DISCO info for node: " + node);
+		outQueue.put(result);
+	}
+
+	private void getLocalDiscoResponse()
+			throws InterruptedException {
+		if (requestIq.getTo().toString().equals(configuration.getProperty("server.domain.anon")) 
+		    || requestIq.getTo().toString().equals(configuration.getProperty("server.domain.topics"))) {
+		    Element query = result.setChildElement(ELEMENT_NAME,
+					JabberDiscoInfo.NAMESPACE_URI);
+			query.addElement("item").addAttribute("name", "buddycloud-server")
+					.addAttribute("jid", configuration.getProperty("server.domain.channels"));
+		} else {
+			Element query = result.setChildElement(ELEMENT_NAME,
+					JabberDiscoInfo.NAMESPACE_URI);
+			query.addElement("identity").addAttribute("category", "pubsub")
+					.addAttribute("type", "channels");
+			query.addElement("identity").addAttribute("category", "pubsub")
+					.addAttribute("type", "inbox");
+			query.addElement("feature").addAttribute("var",
+					"jabber:iq:register");
+			query.addElement("feature").addAttribute("var",
+					"http://jabber.org/protocol/disco#info");
+		}
 		outQueue.put(result);
 	}
 

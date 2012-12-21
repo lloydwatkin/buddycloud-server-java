@@ -22,7 +22,7 @@ public class JabberDiscoInfo extends AbstractNamespace {
 			FederatedQueueManager federatedQueueManager) {
 		
 		super(outQueue, conf, channelManager);		
-		getProcessor = new DiscoInfoGet(outQueue, channelManager);
+		getProcessor = new DiscoInfoGet(outQueue, channelManager, conf);
 		resultProcessor = new DiscoResult(outQueue, federatedQueueManager);
 	}
 

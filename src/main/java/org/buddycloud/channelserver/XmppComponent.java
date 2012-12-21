@@ -18,6 +18,7 @@ public class XmppComponent {
 	
 	private String channelServer;
 	private String anonServer;
+	private String topicsServer;
 	private String password;
 	private Properties conf;
 	
@@ -27,6 +28,7 @@ public class XmppComponent {
 		socket = Integer.valueOf(conf.getProperty("xmpp.port"));
 		channelServer = conf.getProperty("server.domain.channels");
 		password = conf.getProperty("xmpp.secretkey");
+		topicsServer = conf.getProperty("server.domain.topics");
 		anonServer = conf.getProperty("server.domain.anon");
 
 		try {
@@ -45,14 +47,14 @@ public class XmppComponent {
 		ExternalComponentManager manager = new ExternalComponentManager(
 		        hostname, socket);
 		ChannelsEngine channelsEngine = new ChannelsEngine(conf);
-		manager.setSecretKey(channelServer, this.password);
+		manager.setDefaultSecretKey(this.password);
+		
 		manager.addComponent(channelServer, channelsEngine);
-		//if (null != anonServer) {
-		logger.debug("Adding anonymous domain: " + channelServer);    
-		logger.debug("Adding anonymous domain: " + anonServer);
-		    
-		    manager.setSecretKey(anonServer, this.password);
-			manager.addComponent(anonServer, channelsEngine);
-		//}
+		if (null != topicsServer) {
+		    manager.addComponent(topicsServer, channelsEngine);
+		}
+		if (null != anonServer) {
+		    manager.addComponent(anonServer, channelsEngine);
+		}
 	}
 }
